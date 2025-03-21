@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Income and Expense Tracker</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.4/xlsx.full.min.js"></script>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f9;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            color: #333;
+        }
+
+        .container {
+            background-color: #fff;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+            width: 90%;
+            max-width: 900px;
+            transition: all 0.3s ease;
+        }
+
+        h1 {
+            text-align: center;
+            color: #4CAF50;
+            font-size: 2.5em;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            font-size: 16px;
+            color: #555;
+        }
+
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 10px;
+            margin-top: 5px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 16px;
+            box-sizing: border-box;
+        }
+
+        .form-group button {
+            width: 100%;
+            padding: 12px;
+            background-color: #4CAF50;
+            border: none;
+            color: white;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 18px;
+            margin-top: 10px;
+            transition: all 0.3s ease;
+        }
+
+        .form-group button:hover {
+            background-color: #45a049;
+        }
+
+        .dashboard {
+            display: flex;
+            justify-content: space-around;
+            margin-top: 40px;
+            flex-wrap: wrap;
+        }
+
+        .pie-chart {
+            width: 45%;
+            margin-top: 20px;
+        }
+
+        .report {
+            margin-top: 40px;
+        }
+
+        .report-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        .report-table th,
+        .report-table td {
+            border: 1px solid #ddd;
+            padding: 12px;
+            text-align: center;
+            font-size: 16px;
+        }
+
+        .report-table th {
+            background-color: #f2f2f2;
+        }
+
+        .total {
+            margin-top: 20px;
+            font-size: 18px;
+            font-weight: bold;
+            text-align: center;
+        }
+
+        .total span {
+            font-size: 1.2em;
+            color: #4CAF50;
+        }
+
+        .login-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #f4f4f9;
+        }
+
+        .login-container .container {
+            width: 100%;
+            max-width: 400px;
+        }
+
+    </style>
+</head>
+
+<body>
+
+    <!-- Login Form -->
+    <div class="login-container" id="loginContainer">
+        <div class="container">
+            <h1>Login</h1>
+            <div class="form-group">
+                <label for="email">Email</label>
+                <input type="email" id="email" placeholder="Enter your email">
+            </div>
+            <div class="form-group">
+                <label for="password">Password</label>
+                <input type="password" id="password" placeholder="Enter password">
+            </div>
+            <div class="form-group">
+                <button onclick="login()">Login</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Income and Expense Tracker -->
+    <div class="container" id="trackerContainer" style="display: none;">
+        <h1>Income and Expense Tracker</h1>
+
+        <div class="form-group">
+            <label for="description">Description</label>
+            <input type="text" id="description" placeholder="Enter description">
+        </div>
+
+        <div class="form-group">
+            <label for="amount">Amount</label>
+            <input type="number" id="amount" placeholder="Enter amount">
+        </div>
+
+        <div class="form-group">
+            <label for="type">Type</label>
+            <select id="type">
+                <option value="income">Income</option>
+                <option value="expense">Expense</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <button onclick="addTransaction()">Add Transaction</button>
+        </div>
+
+        <!-- Dashboard with Pie Chart -->
+        <div class="dashboard">
+            <div class="pie-chart">
+                <canvas id="incomeExpenseChart"></canvas>
+            </div>
+            <div class="pie-chart">
+                <canvas id="incomeExpenseLineChart"></canvas>
+            </div>
+        </div>
+
+        <div class="report">
+            <h2>Transaction Report</h2>
+            <table class="report-table" id="reportTable">
+                <thead>
+                    <tr>
+                        <th>Description</th>
+                        <th>Amount</th>
+                        <th>Type</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- Transactions will appear here -->
+                </tbody>
+            </table>
+
+            <div class="total" id="total">
+                Total Income: <span>$0</span> | Total Expense: <span>$0</span>
+            </div>
+
+            <!-- Button to download Excel -->
+            <div class="form-group">
+                <button onclick="downloadExcel()">Download Excel</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Login validation function
+        function login() {
+            const email = document.getElementById('email').value.trim();
+            const password = document.getElementById('password').value.trim();
+
+            // Simple login check (email and password can be anything)
+            if (email && password) {
+                // Hide the login form and show the tracker container
+                document.getElementById('loginContainer').style.display = 'none';
+                document.getElementById('trackerContainer').style.display = 'block';
+            } else {
+                alert('Invalid credentials!');
+            }
+        }
+
+        // Data for transactions
+        let transactions = [];
+        let income = 0;
+        let expense = 0;
+
+        let incomeExpenseChart = null;
+        let incomeExpenseLineChart = null;
+
+        // Add transaction function
+        function addTransaction() {
+            const description = document.getElementById('description').value;
+            const amount = parseFloat(document.getElementById('amount').value);
+            const type = document.getElementById('type').value;
+
+            if (description === '' || isNaN(amount) || amount <= 0) {
+                alert("Please fill out all fields correctly.");
+                return;
+            }
+
+            // Add transaction to array
+            transactions.push({ description, amount, type });
+
+            // Update income and expense totals
+            if (type === 'income') {
+                income += amount;
+            } else if (type === 'expense') {
+                expense += amount;
+            }
+
+            // Update report and charts
+            updateReport();
+            updateCharts();
+        }
+
+        // Update report table
+        function updateReport() {
+            const tableBody = document.getElementById('reportTable').getElementsByTagName('tbody')[0];
+            tableBody.innerHTML = '';
+
+            transactions.forEach(transaction => {
+                const row = tableBody.insertRow();
+                row.insertCell(0).innerText = transaction.description;
+                row.insertCell(1).innerText = `$${transaction.amount.toFixed(2)}`;
+                row.insertCell(2).innerText = transaction.type.charAt(0).toUpperCase() + transaction.type.slice(1);
+            });
+
+            document.querySelector('.total span:nth-child(1)').innerText = income.toFixed(2);
+            document.querySelector('.total span:nth-child(2)').innerText = expense.toFixed(2);
+        }
+
+        // Update charts
+        function updateCharts() {
+            // Destroy the existing charts before creating new ones
+            if (incomeExpenseChart) {
+                incomeExpenseChart.destroy();
+            }
+            if (incomeExpenseLineChart) {
+                incomeExpenseLineChart.destroy();
+            }
+
+            // Pie Chart for Income vs Expense
+            incomeExpenseChart = new Chart(document.getElementById('incomeExpenseChart'), {
+                type: 'pie',
+                data: {
+                    labels: ['Income', 'Expense'],
+                    datasets: [{
+                        data: [income, expense],
+                        backgroundColor: ['#4CAF50', '#FF6347']
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function (tooltipItem) {
+                                    return tooltipItem.label + ': $' + tooltipItem.raw.toFixed(2);
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+
+            // Line Chart for Income vs Expense over time (just an example)
+            incomeExpenseLineChart = new Chart(document.getElementById('incomeExpenseLineChart'), {
+                type: 'line',
+                data: {
+                    labels: transactions.map(t => t.description),
+                    datasets: [
+                        {
+                            label: 'Income',
+                            data: transactions.filter(t => t.type === 'income').map(t => t.amount),
+                            borderColor: '#4CAF50',
+                            fill: false,
+                            tension: 0.1
+                        },
+                        {
+                            label: 'Expense',
+                            data: transactions.filter(t => t.type === 'expense').map(t => t.amount),
+                            borderColor: '#FF6347',
+                            fill: false,
+                            tension: 0.1
+                        }
+                    ]
+                }
+            });
+        }
+
+        // Download the transactions as an Excel sheet
+        function downloadExcel() {
+            const ws = XLSX.utils.json_to_sheet(transactions);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "Transactions");
+
+            // Download the Excel file
+            XLSX.writeFile(wb, "income_expense_report.xlsx");
+        }
+    </script>
+
+</body>
+
+</html>
